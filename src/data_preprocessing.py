@@ -7,9 +7,9 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import OneHotEncoder
 
-TARGET_COLUMN = "Traffic_Speed_kmh"
+TARGET_COLUMN = "Traffic_Condition"
 TIMESTAMP_COLUMN = "Timestamp"
 
 RAW_FEATURE_COLUMNS = [
@@ -17,18 +17,30 @@ RAW_FEATURE_COLUMNS = [
     "Latitude",
     "Longitude",
     "Vehicle_Count",
+    "Traffic_Speed_kmh",
     "Road_Occupancy_%",
     "Traffic_Light_State",
     "Weather_Condition",
     "Accident_Report",
+    "Sentiment_Score",
+    "Ride_Sharing_Demand",
+    "Parking_Availability",
+    "Emission_Levels_g_km",
+    "Energy_Consumption_L_h",
 ]
 
 NUMERIC_FEATURE_COLUMNS = [
     "Latitude",
     "Longitude",
     "Vehicle_Count",
+    "Traffic_Speed_kmh",
     "Road_Occupancy_%",
     "Accident_Report",
+    "Sentiment_Score",
+    "Ride_Sharing_Demand",
+    "Parking_Availability",
+    "Emission_Levels_g_km",
+    "Energy_Consumption_L_h",
     "hour",
     "day_of_week",
 ]
@@ -38,11 +50,12 @@ CATEGORICAL_FEATURE_COLUMNS = [
     "Weather_Condition",
 ]
 
-FEATURE_COLUMNS = NUMERIC_FEATURE_COLUMNS + CATEGORICAL_FEATURE_COLUMNS
+MODEL_FEATURE_COLUMNS = NUMERIC_FEATURE_COLUMNS + CATEGORICAL_FEATURE_COLUMNS
 
 
 def load_dataset(dataset_path: str | Path) -> pd.DataFrame:
-    return pd.read_csv(dataset_path)
+    dataset = pd.read_csv(dataset_path)
+    return dataset
 
 
 def validate_columns(df: pd.DataFrame, required_columns: Iterable[str]) -> None:
@@ -60,19 +73,20 @@ def extract_time_features(df: pd.DataFrame) -> pd.DataFrame:
     )
     transformed["hour"] = transformed[TIMESTAMP_COLUMN].dt.hour
     transformed["day_of_week"] = transformed[TIMESTAMP_COLUMN].dt.dayofweek
-    return transformed.drop(columns=[TIMESTAMP_COLUMN])
+    transformed = transformed.drop(columns=[TIMESTAMP_COLUMN])
+    return transformed
 
 
 def prepare_features(df: pd.DataFrame) -> pd.DataFrame:
     validate_columns(df, RAW_FEATURE_COLUMNS)
-    transformed = extract_time_features(df[RAW_FEATURE_COLUMNS])
-    return transformed[FEATURE_COLUMNS]
+    transformed = extract_time_features(df)
+    return transformed[MODEL_FEATURE_COLUMNS]
 
 
 def prepare_training_data(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
     validate_columns(df, [*RAW_FEATURE_COLUMNS, TARGET_COLUMN])
-    features = prepare_features(df)
-    target = df[TARGET_COLUMN]
+    features = prepare_features(df[RAW_FEATURE_COLUMNS])
+    target = df[TARGET_COLUMN].astype(str).fillna("Unknown")
     return features, target
 
 
@@ -80,18 +94,23 @@ def build_preprocessor() -> ColumnTransformer:
     numeric_pipeline = Pipeline(
         steps=[
             ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", StandardScaler()),
         ]
     )
+
     categorical_pipeline = Pipeline(
         steps=[
             ("imputer", SimpleImputer(strategy="most_frequent")),
-            ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+            (
+                "encoder",
+                OneHotEncoder(handle_unknown="ignore", sparse_output=False),
+            ),
         ]
     )
-    return ColumnTransformer(
+
+    preprocessor = ColumnTransformer(
         transformers=[
             ("numeric", numeric_pipeline, NUMERIC_FEATURE_COLUMNS),
             ("categorical", categorical_pipeline, CATEGORICAL_FEATURE_COLUMNS),
         ]
     )
+    return preprocessor

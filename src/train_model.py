@@ -4,14 +4,16 @@ import json
 import pickle
 from pathlib import Path
 
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import LabelEncoder
 
 try:
     from data_preprocessing import (
-        FEATURE_COLUMNS,
+        MODEL_FEATURE_COLUMNS,
+        RAW_FEATURE_COLUMNS,
         TARGET_COLUMN,
         build_preprocessor,
         load_dataset,
@@ -19,7 +21,8 @@ try:
     )
 except ModuleNotFoundError:
     from src.data_preprocessing import (
-        FEATURE_COLUMNS,
+        MODEL_FEATURE_COLUMNS,
+        RAW_FEATURE_COLUMNS,
         TARGET_COLUMN,
         build_preprocessor,
         load_dataset,
@@ -29,7 +32,7 @@ except ModuleNotFoundError:
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATASET_PATH = BASE_DIR / "data" / "smart_mobility_dataset.csv"
 MODEL_DIR = BASE_DIR / "model"
-MODEL_PATH = MODEL_DIR / "traffic_speed_model.pkl"
+MODEL_PATH = MODEL_DIR / "traffic_congestion_model.pkl"
 METRICS_PATH = MODEL_DIR / "training_metrics.json"
 
 
@@ -37,7 +40,18 @@ def build_training_pipeline() -> Pipeline:
     return Pipeline(
         steps=[
             ("preprocessor", build_preprocessor()),
-            ("model", LinearRegression()),
+            (
+                "model",
+                RandomForestClassifier(
+                    n_estimators=300,
+                    max_depth=None,
+                    min_samples_split=2,
+                    min_samples_leaf=1,
+                    random_state=42,
+                    n_jobs=1,
+                    class_weight="balanced_subsample",
+                ),
+            ),
         ]
     )
 
@@ -46,26 +60,37 @@ def train() -> None:
     dataset = load_dataset(DATASET_PATH)
     features, target = prepare_training_data(dataset)
 
+    target_encoder = LabelEncoder()
+    encoded_target = target_encoder.fit_transform(target)
+
+    stratify_target = encoded_target if len(set(encoded_target)) > 1 else None
     X_train, X_test, y_train, y_test = train_test_split(
         features,
-        target,
+        encoded_target,
         test_size=0.2,
         random_state=42,
+        stratify=stratify_target,
     )
 
     pipeline = build_training_pipeline()
     pipeline.fit(X_train, y_train)
 
     predictions = pipeline.predict(X_test)
-    mae = mean_absolute_error(y_test, predictions)
-    mse = mean_squared_error(y_test, predictions)
-    rmse = mse**0.5
-    r2 = r2_score(y_test, predictions)
+    accuracy = accuracy_score(y_test, predictions)
+    report = classification_report(
+        y_test,
+        predictions,
+        target_names=target_encoder.classes_,
+        output_dict=True,
+        zero_division=0,
+    )
 
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     artifact = {
         "pipeline": pipeline,
-        "feature_columns": FEATURE_COLUMNS,
+        "target_encoder": target_encoder,
+        "raw_feature_columns": RAW_FEATURE_COLUMNS,
+        "model_feature_columns": MODEL_FEATURE_COLUMNS,
         "target_column": TARGET_COLUMN,
     }
 
@@ -75,21 +100,15 @@ def train() -> None:
     with METRICS_PATH.open("w", encoding="utf-8") as metrics_file:
         json.dump(
             {
-                "model": "LinearRegression",
-                "target": TARGET_COLUMN,
-                "features": FEATURE_COLUMNS,
-                "mean_absolute_error": mae,
-                "root_mean_squared_error": rmse,
-                "r2_score": r2,
+                "accuracy": accuracy,
+                "classification_report": report,
             },
             metrics_file,
             indent=2,
         )
 
     print(f"Model saved to: {MODEL_PATH}")
-    print(f"MAE: {mae:.4f}")
-    print(f"RMSE: {rmse:.4f}")
-    print(f"R2 score: {r2:.4f}")
+    print(f"Training accuracy: {accuracy:.4f}")
 
 
 if __name__ == "__main__":

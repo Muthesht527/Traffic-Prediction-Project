@@ -1,18 +1,36 @@
 {
-  "model": "LinearRegression",
-  "target": "Traffic_Speed_kmh",
-  "features": [
-    "Latitude",
-    "Longitude",
-    "Vehicle_Count",
-    "Road_Occupancy_%",
-    "Accident_Report",
-    "hour",
-    "day_of_week",
-    "Traffic_Light_State",
-    "Weather_Condition"
-  ],
-  "mean_absolute_error": 18.454540070698666,
-  "root_mean_squared_error": 21.472284946469763,
-  "r2_score": -0.006742877861764196
+  "accuracy": 0.999,
+  "classification_report": {
+    "High": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 633.0
+    },
+    "Low": {
+      "precision": 1.0,
+      "recall": 0.9861111111111112,
+      "f1-score": 0.993006993006993,
+      "support": 72.0
+    },
+    "Medium": {
+      "precision": 0.9966216216216216,
+      "recall": 1.0,
+      "f1-score": 0.9983079526226735,
+      "support": 295.0
+    },
+    "accuracy": 0.999,
+    "macro avg": {
+      "precision": 0.9988738738738738,
+      "recall": 0.9953703703703703,
+      "f1-score": 0.9971049818765554,
+      "support": 1000.0
+    },
+    "weighted avg": {
+      "precision": 0.9990033783783784,
+      "recall": 0.999,
+      "f1-score": 0.998997349520192,
+      "support": 1000.0
+    }
+  }
 }

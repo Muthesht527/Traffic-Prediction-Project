@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Traffic Congestion Prediction</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3efe6;
+      --panel: #fffdf8;
+      --text: #1f2933;
+      --muted: #52606d;
+      --border: #d9cbb3;
+      --accent: #b84c2a;
+      --accent-dark: #8f351a;
+      --panel-soft: #fbf5ea;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      background: linear-gradient(135deg, #f3efe6 0%, #e8dcc7 100%);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 960px;
+      margin: 40px auto;
+      padding: 24px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 18px 40px rgba(70, 52, 24, 0.12);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+    }
+    p {
+      margin: 0 0 20px;
+      color: var(--muted);
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) minmax(320px, 0.95fr);
+      gap: 20px;
+    }
+    .panel {
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--panel-soft);
+    }
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 1.35rem;
+    }
+    form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 14px;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.95rem;
+      color: var(--text);
+      font-weight: 600;
+    }
+    .full {
+      grid-column: 1 / -1;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font: inherit;
+      background: #fff;
+    }
+    .actions {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 12px;
+      margin-top: 6px;
+    }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:hover { background: var(--accent-dark); }
+    button.secondary {
+      background: #e7dcc7;
+      color: var(--text);
+    }
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(120px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .result-card {
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+    }
+    .result-card strong {
+      display: block;
+      font-size: 1.25rem;
+      margin-top: 6px;
+    }
+    .prediction-label {
+      display: inline-block;
+      padding: 8px 12px;
+      border-radius: 999px;
+      transition: background-color 0.2s ease, color 0.2s ease;
+      color: #fff;
+    }
+    .prediction-high {
+      background: #b42318;
+    }
+    .prediction-medium {
+      background: #b16b00;
+    }
+    .prediction-low {
+      background: #0f7b6c;
+    }
+    .prediction-unknown {
+      background: #d9cbb3;
+      color: var(--text);
+    }
+    .status, pre {
+      margin-top: 14px;
+    }
+    .status {
+      color: var(--muted);
+      min-height: 24px;
+    }
+    pre {
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 180px;
+      margin-bottom: 0;
+    }
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      form {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Traffic Congestion Prediction</h1>
+      <p>Enter traffic, weather, and temporal values to get a Random Forest congestion prediction.</p>
+      <div class="layout">
+        <div class="panel">
+          <h2>Input Panel</h2>
+          <form id="prediction-form">
+            <label class="full">Timestamp
+              <input name="Timestamp" value="01-03-2024 08:30" required>
+            </label>
+            <label>Latitude
+              <input name="Latitude" type="number" step="any" value="40.7128" required>
+            </label>
+            <label>Longitude
+              <input name="Longitude" type="number" step="any" value="-74.0060" required>
+            </label>
+            <label>Vehicle Count
+              <input name="Vehicle_Count" type="number" step="1" value="180" required>
+            </label>
+            <label>Traffic Speed (km/h)
+              <input name="Traffic_Speed_kmh" type="number" step="any" value="28.5" required>
+            </label>
+            <label>Road Occupancy (%)
+              <input name="Road_Occupancy_%" type="number" step="any" value="76.3" required>
+            </label>
+            <label>Traffic Light State
+              <select name="Traffic_Light_State">
+                <option>Red</option>
+                <option>Yellow</option>
+                <option>Green</option>
+              </select>
+            </label>
+            <label>Weather Condition
+              <select name="Weather_Condition">
+                <option>Rain</option>
+                <option>Clear</option>
+                <option>Fog</option>
+                <option>Cloudy</option>
+              </select>
+            </label>
+            <label>Accident Report
+              <input name="Accident_Report" type="number" step="1" value="0" required>
+            </label>
+            <label>Sentiment Score
+              <input name="Sentiment_Score" type="number" step="any" value="0.12" required>
+            </label>
+            <label>Ride Sharing Demand
+              <input name="Ride_Sharing_Demand" type="number" step="1" value="42" required>
+            </label>
+            <label>Parking Availability
+              <input name="Parking_Availability" type="number" step="1" value="18" required>
+            </label>
+            <label>Emission Levels (g/km)
+              <input name="Emission_Levels_g_km" type="number" step="any" value="310.4" required>
+            </label>
+            <label>Energy Consumption (L/h)
+              <input name="Energy_Consumption_L_h" type="number" step="any" value="12.8" required>
+            </label>
+            <div class="actions">
+              <button type="submit">Predict Traffic</button>
+              <button type="button" class="secondary" id="reset-btn">Reset</button>
+            </div>
+          </form>
+        </div>
+        <div class="panel">
+          <h2>Output Panel</h2>
+          <div class="result-grid">
+            <div class="result-card">
+              Predicted Condition
+              <strong id="predicted-label" class="prediction-label prediction-unknown">-</strong>
+            </div>
+            <div class="result-card">
+              Highest Confidence
+              <strong id="predicted-confidence">-</strong>
+            </div>
+          </div>
+          <div class="status" id="status">Enter values and run a prediction.</div>
+          <pre id="result-json">No prediction yet.</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const form = document.getElementById("prediction-form");
+    const resetBtn = document.getElementById("reset-btn");
+    const statusEl = document.getElementById("status");
+    const resultJsonEl = document.getElementById("result-json");
+    const predictedLabelEl = document.getElementById("predicted-label");
+    const predictedConfidenceEl = document.getElementById("predicted-confidence");
+    const initialValues = Object.fromEntries(new FormData(form).entries());
+    const numericFields = new Set([
+      "Latitude",
+      "Longitude",
+      "Vehicle_Count",
+      "Traffic_Speed_kmh",
+      "Road_Occupancy_%",
+      "Accident_Report",
+      "Sentiment_Score",
+      "Ride_Sharing_Demand",
+      "Parking_Availability",
+      "Emission_Levels_g_km",
+      "Energy_Consumption_L_h"
+    ]);
+
+    function extractPayload() {
+      const formData = new FormData(form);
+      const payload = {};
+      for (const [key, value] of formData.entries()) {
+        payload[key] = numericFields.has(key) ? Number(value) : value;
+      }
+      return payload;
+    }
+
+    function updateOutput(prediction) {
+      const predictedLabel = prediction.predicted_traffic_condition || "-";
+      predictedLabelEl.textContent = predictedLabel;
+      predictedLabelEl.className = "prediction-label";
+      if (predictedLabel === "High") {
+        predictedLabelEl.classList.add("prediction-high");
+      } else if (predictedLabel === "Medium") {
+        predictedLabelEl.classList.add("prediction-medium");
+      } else if (predictedLabel === "Low") {
+        predictedLabelEl.classList.add("prediction-low");
+      } else {
+        predictedLabelEl.classList.add("prediction-unknown");
+      }
+      const probs = prediction.class_probabilities || {};
+      let bestLabel = "-";
+      let bestValue = 0;
+      for (const [label, value] of Object.entries(probs)) {
+        if (value > bestValue) {
+          bestLabel = label;
+          bestValue = value;
+        }
+      }
+      predictedConfidenceEl.textContent = bestLabel === "-"
+        ? "-"
+        : `${bestLabel} (${(bestValue * 100).toFixed(1)}%)`;
+      resultJsonEl.textContent = JSON.stringify(prediction, null, 2);
+    }
+
+    async function runPrediction(event) {
+      event.preventDefault();
+      const payload = extractPayload();
+      statusEl.textContent = "Running Random Forest prediction...";
+      try {
+        const response = await fetch("/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Prediction failed.");
+        }
+        const prediction = (data.predictions || [])[0] || {};
+        updateOutput(prediction);
+        statusEl.textContent = "Prediction complete.";
+      } catch (error) {
+        predictedLabelEl.textContent = "-";
+        predictedLabelEl.className = "prediction-label prediction-unknown";
+        predictedConfidenceEl.textContent = "-";
+        resultJsonEl.textContent = JSON.stringify({ error: String(error) }, null, 2);
+        statusEl.textContent = String(error);
+      }
+    }
+
+    function resetForm() {
+      for (const [key, value] of Object.entries(initialValues)) {
+        const input = form.elements.namedItem(key);
+        if (input) {
+          input.value = value;
+        }
+      }
+      predictedLabelEl.textContent = "-";
+      predictedLabelEl.className = "prediction-label prediction-unknown";
+      predictedConfidenceEl.textContent = "-";
+      resultJsonEl.textContent = "No prediction yet.";
+      statusEl.textContent = "Enter values and run a prediction.";
+    }
+
+    form.addEventListener("submit", runPrediction);
+    resetBtn.addEventListener("click", resetForm);
+  </script>
+</body>
+</html>
