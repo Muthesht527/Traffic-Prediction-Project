@@ -1,0 +1,18 @@
+{
+  "model": "LinearRegression",
+  "target": "Traffic_Speed_kmh",
+  "features": [
+    "Latitude",
+    "Longitude",
+    "Vehicle_Count",
+    "Road_Occupancy_%",
+    "Accident_Report",
+    "hour",
+    "day_of_week",
+    "Traffic_Light_State",
+    "Weather_Condition"
+  ],
+  "mean_absolute_error": 18.454540070698666,
+  "root_mean_squared_error": 21.472284946469763,
+  "r2_score": -0.006742877861764196
+}
