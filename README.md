@@ -1,4 +1,4 @@
-# Machine Learning-Based Traffic Congestion Prediction
+# Traffic Congestion Prediction using Random Forest Classifier
 
 ## Project structure
 
@@ -10,6 +10,8 @@ src/
   train_model.py
   predict.py
   app.py
+  template/
+    index.html
 requirements.txt
 ```
 
