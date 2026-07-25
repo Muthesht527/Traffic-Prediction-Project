@@ -1,4 +1,4 @@
-# Traffic Congestion Prediction using Random Forest Classifier
+# Machine Learning-Based Traffic Congestion Prediction
 
 ## Project structure
 
@@ -10,17 +10,15 @@ src/
   train_model.py
   predict.py
   app.py
-  template/
-    index.html
 requirements.txt
 ```
 
 ## Setup
 
 ```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 ```
 
 ## Train the model
@@ -40,6 +38,8 @@ This creates:
 python src/app.py
 ```
 
+The app runs at `http://127.0.0.1:5001/`.
+
 API endpoints:
 
 - `GET /health`
@@ -48,8 +48,8 @@ API endpoints:
 ## Sample prediction request
 
 ```bash
-curl -X POST http://127.0.0.1:5000/predict ^
-  -H "Content-Type: application/json" ^
+curl -X POST http://127.0.0.1:5001/predict \
+  -H "Content-Type: application/json" \
   -d "{\"Timestamp\":\"01-03-2024 08:30\",\"Latitude\":40.7128,\"Longitude\":-74.0060,\"Vehicle_Count\":180,\"Traffic_Speed_kmh\":28.5,\"Road_Occupancy_%\":76.3,\"Traffic_Light_State\":\"Red\",\"Weather_Condition\":\"Rain\",\"Accident_Report\":0,\"Sentiment_Score\":0.12,\"Ride_Sharing_Demand\":42,\"Parking_Availability\":18,\"Emission_Levels_g_km\":310.4,\"Energy_Consumption_L_h\":12.8}"
 ```
 
