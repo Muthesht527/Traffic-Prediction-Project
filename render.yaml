@@ -1,0 +1,46 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Render Blueprint — provisions the Flask backend as a managed web service.
+#
+#   Render dashboard → "New" → "Blueprint" → select this repo → Apply.
+#   (Or create a Web Service manually using the same build/start commands.)
+#
+# URL after deploy: https://traffic-forecast-api.onrender.com
+# → paste that URL into frontend/vercel.json before deploying the frontend.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  - type: web
+    name: traffic-forecast-api
+    runtime: python
+    plan: free
+    region: singapore          # closest Render region to India
+    branch: main
+    # Build context is the repo root so model/ + dataset/ sit next to backend/.
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 "backend.app:create_app()"
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: FLASK_DEBUG
+        value: "false"
+      # Comma-separated allowed origins for the API, or "*" for public access.
+      # Set to your Vercel domain (e.g. https://your-app.vercel.app) if you
+      # point VITE_API_BASE straight at Render instead of using the proxy.
+      - key: CORS_ORIGINS
+        value: "*"
+      # Optional live-data keys — fill these in the Render dashboard
+      # (sync: false = prompt for value, never commit secrets).
+      - key: OPENWEATHER_API_KEY
+        sync: false
+      - key: OPENROUTESERVICE_API_KEY
+        sync: false
+
+    # ── Optional: persist the SQLite history DB across deploys ──────────────
+    # Persistent disks require a paid instance type (starter+). On the free
+    # plan the DB is ephemeral — prediction history resets on each deploy.
+    # disk:
+    #   name: traffic-forecast-data
+    #   mountPath: /opt/render/project/src/data
+    #   sizeGB: 1

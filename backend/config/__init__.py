@@ -27,6 +27,16 @@ FLASK_HOST = os.getenv("FLASK_HOST", "0.0.0.0")
 FLASK_PORT = int(os.getenv("FLASK_PORT", "5001"))
 FLASK_DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
 
+# CORS — allowed origins for /api/* (comma-separated), "*" = public access.
+# Tighten this to your frontend origin (e.g. https://your-app.vercel.app)
+# when the frontend calls the API directly instead of through a proxy.
+_cors_raw = os.getenv("CORS_ORIGINS", "*")
+CORS_ORIGINS = (
+    "*"
+    if _cors_raw.strip() == "*"
+    else [o.strip() for o in _cors_raw.split(",") if o.strip()]
+)
+
 # Default supported region (Chennai, India) — only dataset coverage area
 DEFAULT_REGION = {
     "name": "Chennai",
