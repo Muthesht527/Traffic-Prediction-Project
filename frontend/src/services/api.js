@@ -10,9 +10,6 @@ const api = axios.create({
 
 /**
  * Submit a forecast request to the backend.
- *
- * @param {{ source: string|object, destination: string|object, date: string, time: string }} payload
- * @returns {Promise<object>} Forecast response
  */
 export async function submitForecast(payload) {
   const response = await api.post('/forecast', payload);
@@ -20,7 +17,7 @@ export async function submitForecast(payload) {
 }
 
 /**
- * Geocode a place name to lat/lng.
+ * Geocode a place name to lat/lng (used by autocomplete).
  */
 export async function geocode(query) {
   const response = await api.get('/geocode', { params: { q: query } });
@@ -36,10 +33,18 @@ export async function getCoverage() {
 }
 
 /**
- * Check if a lat/lng is within coverage.
+ * Get model info (metrics, feature importances).
  */
-export async function checkCoverage(lat, lng) {
-  const response = await api.get('/coverage/check', { params: { lat, lng } });
+export async function getModelInfo() {
+  const response = await api.get('/model/info');
+  return response.data;
+}
+
+/**
+ * Get prediction history.
+ */
+export async function getPredictionHistory(limit = 20) {
+  const response = await api.get('/history', { params: { limit } });
   return response.data;
 }
 

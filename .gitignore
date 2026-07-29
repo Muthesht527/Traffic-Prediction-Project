@@ -24,5 +24,8 @@ Thumbs.db
 *.pkl
 traffic_dataset.zip
 
+# Database
+*.db
+
 # Logs
 *.log

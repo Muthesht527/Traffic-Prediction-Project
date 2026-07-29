@@ -32,22 +32,32 @@ export default function ForecastPage() {
       <Navbar />
 
       <div className="flex-1 flex flex-col lg:flex-row gap-4 p-4 max-w-[1600px] mx-auto w-full">
-        {/* Left sidebar: form + summary */}
-        <div className="lg:w-[380px] flex-shrink-0 space-y-4">
+        {/* Left sidebar */}
+        <div className="lg:w-[400px] flex-shrink-0 space-y-4 order-2 lg:order-1">
           <ForecastForm onSubmit={handleForecast} loading={loading} />
 
+          {/* Error display */}
           {error && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-sm">
-              <strong>Error:</strong> {error}
+            <div className="p-4 bg-red-50 border border-red-100 rounded-2xl animate-fade-in">
+              <div className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-red-500 text-xs font-bold">!</span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-red-800">Something went wrong</p>
+                  <p className="text-xs text-red-600 mt-0.5">{error}</p>
+                </div>
+              </div>
             </div>
           )}
 
+          {/* Prediction summary */}
           {forecastData && <PredictionSummary data={forecastData} />}
         </div>
 
-        {/* Right: Map + Legend */}
-        <div className="flex-1 flex flex-col min-h-[500px] lg:min-h-0 relative">
-          <TrafficMap forecastData={forecastData} />
+        {/* Right: Map */}
+        <div className="flex-1 flex flex-col min-h-[500px] lg:min-h-0 relative order-1 lg:order-2">
+          <TrafficMap forecastData={forecastData} loading={loading} />
           <Legend />
         </div>
       </div>

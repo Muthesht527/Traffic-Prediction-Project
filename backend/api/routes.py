@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from flask import Blueprint, jsonify, request
 
 from backend.config import DEFAULT_REGION
 from backend.services import (
     color_mapper,
+    database_service,
     geocoding_service,
     prediction_service,
     route_service,
@@ -86,82 +85,139 @@ def forecast():
     if payload is None:
         return jsonify({"error": "Request body must be valid JSON."}), 400
 
-    # -- Resolve source ------------------------------------------------
-    origin = _resolve_location(payload.get("source"))
-    if origin is None:
-        return jsonify({"error": "Invalid or missing 'source'."}), 400
+    try:
+        # -- Resolve source ------------------------------------------------
+        origin = _resolve_location(payload.get("source"))
+        if origin is None:
+            return jsonify({"error": "Invalid or missing 'source'."}), 400
 
-    # -- Resolve destination -------------------------------------------
-    destination = _resolve_location(payload.get("destination"))
-    if destination is None:
-        return jsonify({"error": "Invalid or missing 'destination'."}), 400
+        # -- Resolve destination -------------------------------------------
+        destination = _resolve_location(payload.get("destination"))
+        if destination is None:
+            return jsonify({"error": "Invalid or missing 'destination'."}), 400
 
-    # -- Parse date/time -----------------------------------------------
-    target_dt = _parse_datetime(payload.get("date"), payload.get("time"))
-    if target_dt is None:
-        return jsonify({"error": "Invalid or missing 'date' / 'time'."}), 400
+        # -- Parse date/time -----------------------------------------------
+        target_dt = _parse_datetime(payload.get("date"), payload.get("time"))
+        if target_dt is None:
+            return jsonify({"error": "Invalid or missing 'date' / 'time'."}), 400
 
-    # -- Coverage check ------------------------------------------------
-    bounds = DEFAULT_REGION["bounds"]
-    mid_lat = (origin[0] + destination[0]) / 2
-    mid_lng = (origin[1] + destination[1]) / 2
-    in_coverage = (
-        bounds["south"] <= mid_lat <= bounds["north"]
-        and bounds["west"] <= mid_lng <= bounds["east"]
-    )
-
-    # -- Get route -----------------------------------------------------
-    route = route_service.get_route(origin, destination)
-    if route is None:
-        return jsonify({"error": "Could not retrieve route."}), 502
-
-    # -- Get weather ---------------------------------------------------
-    weather = weather_service.get_weather_forecast(mid_lat, mid_lng, target_dt)
-
-    # -- Predict congestion --------------------------------------------
-    if in_coverage:
-        prediction = prediction_service.predict_congestion(
-            origin, destination, target_dt, route, weather
+        # -- Coverage check ------------------------------------------------
+        bounds = DEFAULT_REGION["bounds"]
+        mid_lat = (origin[0] + destination[0]) / 2
+        mid_lng = (origin[1] + destination[1]) / 2
+        in_coverage = (
+            bounds["south"] <= mid_lat <= bounds["north"]
+            and bounds["west"] <= mid_lng <= bounds["east"]
         )
-        congestion_score = prediction["congestion_score"]
-    else:
-        congestion_score = None
-        prediction = {
-            "congestion_score": None,
-            "predicted_condition": None,
-            "class_probabilities": {},
-            "message": "Outside supported dataset coverage.",
+
+        # -- Get route -----------------------------------------------------
+        route = route_service.get_route(origin, destination)
+        if route is None:
+            return jsonify({"error": "Could not retrieve route."}), 502
+
+        # -- Get weather ---------------------------------------------------
+        weather = weather_service.get_weather_forecast(mid_lat, mid_lng, target_dt)
+
+        # -- Predict congestion --------------------------------------------
+        if in_coverage:
+            prediction = prediction_service.predict_congestion(
+                origin, destination, target_dt, route, weather
+            )
+            congestion_score = prediction["congestion_score"]
+        else:
+            congestion_score = None
+            prediction = {
+                "congestion_score": None,
+                "predicted_condition": None,
+                "class_probabilities": {},
+                "model": "none",
+                "message": "Outside supported dataset coverage.",
+            }
+
+        # -- Colour segments -----------------------------------------------
+        segments = color_mapper.segment_route_with_colors(
+            route["coordinates"], congestion_score
+        )
+
+        # -- Build response ------------------------------------------------
+        response = {
+            "source": {
+                "lat": origin[0],
+                "lng": origin[1],
+                "query": str(payload.get("source")),
+            },
+            "destination": {
+                "lat": destination[0],
+                "lng": destination[1],
+                "query": str(payload.get("destination")),
+            },
+            "target_datetime": target_dt.isoformat(),
+            "route": {
+                "distance_m": route["distance_m"],
+                "duration_s": route["duration_s"],
+                "source": route["source"],
+            },
+            "weather": weather,
+            "prediction": prediction,
+            "segments": segments,
+            "coverage": {"available": in_coverage, "region": DEFAULT_REGION["name"]},
         }
 
-    # -- Colour segments -----------------------------------------------
-    segments = color_mapper.segment_route_with_colors(
-        route["coordinates"], congestion_score
-    )
+        # -- Save to database (fire-and-forget) ----------------------------
+        try:
+            database_service.save_prediction(response)
+        except Exception as exc:
+            log.warning("Failed to save prediction to database: %s", exc)
 
-    # -- Build response ------------------------------------------------
-    response = {
-        "source": {
-            "lat": origin[0],
-            "lng": origin[1],
-            "query": str(payload.get("source")),
-        },
-        "destination": {
-            "lat": destination[0],
-            "lng": destination[1],
-            "query": str(payload.get("destination")),
-        },
-        "target_datetime": target_dt.isoformat(),
-        "route": {
-            "distance_m": route["distance_m"],
-            "duration_s": route["duration_s"],
-            "source": route["source"],
-        },
-        "weather": weather,
-        "prediction": prediction,
-        "segments": segments,
-        "coverage": {"available": in_coverage, "region": DEFAULT_REGION["name"]},
+        return jsonify(response), 200
+
+    except Exception as exc:
+        log.exception("Unhandled error in /forecast: %s", exc)
+        return jsonify({"error": f"Internal server error: {exc}"}), 500
+
+
+# ── History ─────────────────────────────────────────────────────────────
+
+@bp.get("/history")
+def prediction_history():
+    """Return recent prediction records."""
+    limit = request.args.get("limit", 20, type=int)
+    limit = max(1, min(100, limit))
+    records = database_service.get_recent_predictions(limit)
+    count = database_service.get_prediction_count()
+    return jsonify({"predictions": records, "total": count}), 200
+
+
+# ── Model Info ──────────────────────────────────────────────────────────
+
+@bp.get("/model/info")
+def model_info():
+    """Return model metadata (feature importances, metrics, etc.)."""
+    from backend.model.model_loader import ModelLoader
+    import json
+    from pathlib import Path
+
+    loader = ModelLoader()
+    info = {
+        "has_regressor": loader.has_regressor(),
+        "has_classifier": loader.has_classifier(),
+        "classifier_classes": loader.get_classes(),
+        "feature_importances": loader.feature_importances,
     }
-    return jsonify(response), 200
+
+    # Load metrics files if they exist
+    model_dir = Path(__file__).resolve().parent.parent.parent / "model"
+    metrics_file = model_dir / "regression_metrics.json"
+    if metrics_file.exists():
+        with metrics_file.open() as f:
+            info["regression_metrics"] = json.load(f)
+
+    class_metrics = model_dir / "training_metrics.json"
+    if class_metrics.exists():
+        with class_metrics.open() as f:
+            info["classification_metrics"] = json.load(f)
+
+    return jsonify(info), 200
 
 
 # ── helpers ────────────────────────────────────────────────────────────
@@ -180,8 +236,10 @@ def _resolve_location(value) -> tuple[float, float] | None:
     return None
 
 
-def _parse_datetime(date_str, time_str) -> datetime | None:
+def _parse_datetime(date_str, time_str):
     """Combine date + time strings into a datetime."""
+    from datetime import datetime
+
     if not date_str or not time_str:
         return None
     try:

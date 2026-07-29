@@ -15,6 +15,7 @@ from flask import Flask
 
 from backend.api.routes import bp as api_bp
 from backend.config import FLASK_DEBUG, FLASK_HOST, FLASK_PORT
+from backend.services.database_service import init_db
 from backend.utils.logger import get_logger
 
 log = get_logger("app")
@@ -28,13 +29,30 @@ def create_app() -> Flask:
     )
     app.register_blueprint(api_bp)
 
+    # Initialise the database on first request
+    with app.app_context():
+        init_db()
+
     @app.get("/")
     def root():
         return {
             "service": "Traffic Forecast API",
             "version": "1.0.0",
-            "endpoints": ["/api/health", "/api/forecast", "/api/geocode", "/api/coverage"],
+            "endpoints": [
+                "/api/health",
+                "/api/forecast",
+                "/api/geocode",
+                "/api/coverage",
+                "/api/coverage/check",
+                "/api/history",
+                "/api/model/info",
+            ],
         }
+
+    @app.teardown_appcontext
+    def _close_db(exc=None):
+        from backend.services.database_service import close
+        close()
 
     return app
 

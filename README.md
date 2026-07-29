@@ -1,12 +1,28 @@
-# AI-Powered Traffic Forecast Visualization Platform
+# 🚦 AI-Powered Traffic Forecast Visualization Platform
 
 > Predict future traffic congestion and visualize it on an interactive map — Google Maps-style coloured routes powered by machine learning.
 
+<div align="center">
+
+**Phase 1 · Hackathon MVP**
+
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
+[![Flask](https://img.shields.io/badge/Flask-3.0-green.svg)](https://flask.palletsprojects.com)
+[![React](https://img.shields.io/badge/React-18-61DAFB.svg)](https://react.dev)
+[![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-1.9-orange.svg)](https://scikit-learn.org)
+[![Leaflet](https://img.shields.io/badge/Leaflet-1.9-199900.svg)](https://leafletjs.com)
+
+</div>
+
+---
+
 ## 🎯 What This Is
 
-A **Traffic Forecast Visualization Platform** — **NOT** another Google Maps clone.
+A **Traffic Forecast Visualization Platform** — **NOT** a navigation app.
 
-Users select a source, destination, date, and time. The system fetches the route, retrieves a weather forecast, runs an ML model, and displays predicted congestion as coloured polylines on an interactive Leaflet map.
+Users select a **source**, **destination**, **date**, and **time** (up to 7 days ahead). The system fetches the route, retrieves a weather forecast, runs a **Random Forest ML model**, and displays predicted congestion as coloured polylines on an interactive Leaflet map.
+
+### Congestion Score Mapping
 
 | Colour | Score | Meaning |
 |--------|-------|---------|
@@ -16,88 +32,159 @@ Users select a source, destination, date, and time. The system fetches the route
 | 🔴 Red | 71–100 | Heavy Congestion |
 | ⚫ Grey | — | Coverage Not Available |
 
+### Phase 1 Coverage
+
+Only **Chennai, India** is supported. Roads outside the dataset region are shown in grey. **Predictions are never faked.**
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    USER (Browser)                       │
+└──────────────────────┬──────────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────┐
+│           FRONTEND (React + Vite + TailwindCSS)         │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────────────┐  │
+│  │ Landing  │  │ Forecast │  │  TrafficMap (Leaflet) │  │
+│  │ Page     │  │ Form     │  │  + RouteLayer + Legend│  │
+│  └──────────┘  └──────────┘  └──────────────────────┘  │
+└──────────────────────┬──────────────────────────────────┘
+                       │ REST API (JSON)
+┌──────────────────────▼──────────────────────────────────┐
+│                BACKEND (Flask)                           │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │          API Layer (routes.py)                    │   │
+│  └───────────────────────┬──────────────────────────┘   │
+│  ┌──────────┬────────────┼───────────┬──────────────┐   │
+│  │ Route    │  Weather   │ Prediction│ Geocoding    │   │
+│  │ Service  │  Service   │ Service   │ Service      │   │
+│  └────┬─────┘──┬─────────┘─────┬─────┘──────┬───────┘   │
+│       │        │               │            │           │
+│  ┌────▼────────▼───────────────▼────────────▼───────┐   │
+│  │         Feature Engineering Layer                 │   │
+│  └───────────────────────┬───────────────────────────┘   │
+│  ┌───────────┐  ┌────────▼───────┐  ┌──────────────┐    │
+│  │  Model    │  │   Traffic      │  │   Color      │    │
+│  │  Loader   │  │   Predictor    │  │   Mapper     │    │
+│  └───────────┘  └────────────────┘  └──────────────┘    │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │         SQLite Database Service                   │   │
+│  └──────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## 📁 Project Structure
 
 ```
 Traffic-Prediction-Project/
-├── backend/                  # Flask API server
+├── backend/                         # Flask API server
 │   ├── api/
-│   │   └── routes.py         # API endpoints (health, forecast, geocode, coverage)
+│   │   └── routes.py                # 7 API endpoints
 │   ├── config/
-│   │   └── __init__.py       # Centralised configuration
+│   │   └── __init__.py              # Centralised configuration
 │   ├── model/
-│   │   └── model_loader.py   # Load trained ML model
+│   │   └── model_loader.py          # Loads classifier + regressor
 │   ├── services/
-│   │   ├── color_mapper.py   # Score → colour mapping
-│   │   ├── feature_engineering.py  # Build model features from inputs
-│   │   ├── geocoding_service.py    # Nominatim geocoding
-│   │   ├── prediction_service.py   # ML prediction pipeline
-│   │   ├── route_service.py        # OpenRouteService / OSRM routing
-│   │   └── weather_service.py      # OpenWeather forecast
+│   │   ├── color_mapper.py          # Score → colour mapping
+│   │   ├── database_service.py      # SQLite prediction history
+│   │   ├── feature_engineering.py   # Build model features
+│   │   ├── geocoding_service.py     # Nominatim integration
+│   │   ├── model_trainer.py         # Train both models
+│   │   ├── prediction_service.py    # ML prediction pipeline
+│   │   ├── route_service.py         # ORS / OSRM / synthetic
+│   │   └── weather_service.py       # OpenWeather / synthetic
 │   ├── utils/
-│   │   └── logger.py
-│   ├── app.py                # Flask entry point
-│   ├── .env.example
+│   │   ├── dataset_mapper.py        # Configurable column mapping
+│   │   └── logger.py                # Centralised logging
+│   ├── app.py                       # Flask entry point
 │   └── requirements.txt
-├── frontend/                 # React + Vite + Leaflet + Tailwind
+├── frontend/                        # React + Vite + Leaflet + Tailwind
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── Form/
+│   │   │   │   ├── AutocompleteSearch.jsx  # Location autocomplete
 │   │   │   │   └── ForecastForm.jsx
 │   │   │   ├── Map/
-│   │   │   │   ├── TrafficMap.jsx
+│   │   │   │   ├── Legend.jsx
 │   │   │   │   ├── RouteLayer.jsx
-│   │   │   │   └── Legend.jsx
+│   │   │   │   └── TrafficMap.jsx
 │   │   │   └── UI/
 │   │   │       ├── Navbar.jsx
 │   │   │       └── PredictionSummary.jsx
 │   │   ├── pages/
-│   │   │   ├── LandingPage.jsx
-│   │   │   └── ForecastPage.jsx
-│   │   ├── services/
-│   │   │   └── api.js
-│   │   ├── utils/
-│   │   │   └── colorMapper.js
+│   │   │   ├── ForecastPage.jsx
+│   │   │   └── LandingPage.jsx
+│   │   ├── services/api.js
+│   │   ├── utils/colorMapper.js
 │   │   ├── App.jsx
 │   │   ├── main.jsx
-│   │   └── index.css
-│   ├── .env.example
+│   │   └── index.css                # Animations + Tailwind
 │   ├── package.json
 │   ├── vite.config.js
-│   ├── tailwind.config.js
-│   └── index.html
+│   └── tailwind.config.js
 ├── dataset/
-│   └── smart_mobility_dataset.csv
+│   └── smart_mobility_dataset.csv   # 5,000 rows
 ├── model/
-│   ├── traffic_congestion_model.pkl
-│   └── training_metrics.json
-├── src/                      # Original training scripts
-│   ├── data_preprocessing.py
-│   ├── train_model.py
-│   ├── predict.py
-│   └── app.py
-└── README.md
+│   ├── traffic_congestion_model.pkl # Classifier
+│   ├── congestion_regressor.pkl     # Regressor (0-100 score)
+│   ├── training_metrics.json        # Classification metrics
+│   └── regression_metrics.json      # MAE, RMSE, R²
+├── data/
+│   ├── smart_mobility_dataset.csv   # Original dataset
+│   └── traffic_forecast.db          # SQLite prediction history
+└── src/                             # Original training scripts
+    ├── data_preprocessing.py
+    ├── train_model.py
+    └── predict.py
 ```
+
+---
 
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
 | **Frontend** | React 18, Vite, Leaflet, React-Leaflet, TailwindCSS, Lucide Icons |
-| **Backend** | Python, Flask, Scikit-learn, Pandas |
-| **ML Model** | Random Forest (300 trees), probability-weighted scoring |
+| **Backend** | Python, Flask, Pandas, SQLite |
+| **ML Models** | Random Forest Classifier (99.9% acc) + Random Forest Regressor (R² = 0.94) |
 | **Maps** | Leaflet + OpenStreetMap tiles |
-| **Routing** | OpenRouteService (primary), OSRM (fallback), synthetic (offline) |
-| **Weather** | OpenWeather API (with synthetic fallback) |
+| **Routing** | OpenRouteService → OSRM → synthetic fallback |
+| **Weather** | OpenWeather API → synthetic fallback |
 | **Geocoding** | Nominatim (OpenStreetMap) |
+
+---
+
+## 🧠 ML Models
+
+### Classifier (Original)
+- **Algorithm**: Random Forest (300 trees)
+- **Accuracy**: 99.9%
+- **Output**: Categorical (High / Medium / Low)
+- **Score derivation**: Probability-weighted: `P(High)×85 + P(Medium)×55 + P(Low)×10`
+
+### Regressor (Enhanced)
+- **Algorithm**: Random Forest Regressor (300 trees)
+- **MAE**: 4.0 | **RMSE**: 5.06 | **R²**: 0.94
+- **Output**: Direct congestion score (0–100)
+- **Top features**: Traffic Speed, Vehicle Count, Road Occupancy
+
+### Training
+```bash
+python backend/services/model_trainer.py
+```
+
+---
 
 ## 🚀 Quick Start
 
 ### Backend
 
 ```bash
-cd Traffic-Prediction-Project
-
 # Create virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
@@ -107,9 +194,11 @@ pip install -r backend/requirements.txt
 
 # (Optional) Set API keys
 cp backend/.env.example backend/.env
-# Edit backend/.env with your keys
 
-# Start backend server
+# Train models (already trained — artifacts exist)
+python backend/services/model_trainer.py
+
+# Start server
 python -m backend.app
 # → http://localhost:5001
 ```
@@ -122,10 +211,12 @@ cd frontend
 # Install dependencies
 npm install
 
-# Start dev server (proxies /api → backend on :5001)
+# Start dev server
 npm run dev
 # → http://localhost:3000
 ```
+
+---
 
 ## 📡 API Endpoints
 
@@ -136,30 +227,23 @@ npm run dev
 | `GET` | `/api/coverage/check?lat=…&lng=…` | Check if point is in coverage |
 | `GET` | `/api/geocode?q=…` | Geocode a place name |
 | `POST` | `/api/forecast` | **Main forecast endpoint** |
+| `GET` | `/api/history` | Prediction history (SQLite) |
+| `GET` | `/api/model/info` | Model metadata + metrics |
 
-### Forecast Request
+### Forecast Example
 
-```json
-{
-  "source": "Adyar, Chennai",
-  "destination": "T. Nagar, Chennai",
-  "date": "2024-03-15",
-  "time": "08:30"
-}
+```bash
+curl -X POST http://localhost:5001/api/forecast \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "Adyar, Chennai",
+    "destination": "T. Nagar, Chennai",
+    "date": "2024-03-15",
+    "time": "08:30"
+  }'
 ```
 
-Or with coordinates:
-
-```json
-{
-  "source": {"lat": 13.0827, "lng": 80.2707},
-  "destination": {"lat": 13.0418, "lng": 80.2341},
-  "date": "2024-03-15",
-  "time": "08:30"
-}
-```
-
-### Forecast Response
+### Response
 
 ```json
 {
@@ -169,41 +253,52 @@ Or with coordinates:
   "route": {"distance_m": 5200, "duration_s": 624, "source": "osrm"},
   "weather": {"temperature": 31.0, "humidity": 70, "wind_speed": 8, "rain_1h": 0, "source": "synthetic"},
   "prediction": {
-    "congestion_score": 83.6,
+    "congestion_score": 83.4,
     "predicted_condition": "High",
-    "class_probabilities": {"High": 0.95, "Low": 0.0, "Medium": 0.05}
+    "class_probabilities": {"High": 0.68, "Medium": 0.28, "Low": 0.04},
+    "model": "regressor"
   },
-  "segments": [
-    {"coordinates": [[80.27, 13.08], ...], "color": "#ef4444", "congestion_score": 83.6, "label": "Heavy Congestion"}
-  ],
+  "segments": [{"coordinates": [...], "color": "#ef4444", "congestion_score": 83.4, "label": "Heavy Congestion"}],
   "coverage": {"available": true, "region": "Chennai"}
 }
 ```
 
-## 🧠 ML Model
+---
 
-The model is a **Random Forest Classifier** (300 trees) trained on 5,000 samples from the Smart Mobility Dataset.
+## 🧪 Sample Predictions (Tested)
 
-- **Training accuracy**: 99.9%
-- **Input features**: 14 columns (temporal, geospatial, traffic, weather, contextual)
-- **Output**: Categorical (High / Medium / Low) → converted to a continuous 0–100 score via probability weighting
+| Scenario | Time | Score | Condition | Color |
+|----------|------|-------|-----------|-------|
+| Peak Morning | 08:30 | 83.4 | Heavy | 🔴 Red |
+| Afternoon | 14:00 | 53.4 | Moderate | 🟠 Orange |
+| Late Night | 02:00 | 11.1 | Low | 🟢 Green |
+| Evening Rush | 18:00 | 83.6 | Heavy | 🔴 Red |
+| Outside Coverage | Any | — | N/A | ⚫ Grey |
 
-**Score derivation**: `score = P(High) × 85 + P(Medium) × 55 + P(Low) × 10`
+---
 
-## 🗺️ Current Coverage
+## 🔮 Future Phases (Not Implemented)
 
-**Phase 1** supports only **Chennai, India**. Routes outside this region are displayed in grey with the label "Coverage Not Available". No fake predictions are ever generated.
+The architecture is designed for seamless expansion:
 
-## 🔮 Future Phases (Not Yet Implemented)
+- 🔴 Road-level prediction (multi-segment coloured routes)
+- 📹 CCTV + YOLO vehicle detection
+- 📡 IoT and government sensor integration
+- 🔄 Automatic model retraining
+- 🚗 ETA and travel time prediction
+- 🏙️ City-wide expansion
+- 🔐 Authentication and admin dashboard
+- 📱 Mobile application
+- 📊 Prediction confidence intervals
 
-- Road-level prediction (multiple coloured segments per route)
-- Live traffic from CCTV / YOLO
-- IoT and government sensor integration
-- Automatic model retraining
-- ETA prediction
-- City-wide expansion
-- Authentication and admin dashboard
+---
 
 ## 📝 Problem Statement
 
-> Rapid urbanization and increasing vehicle usage have led to frequent traffic congestion. Existing navigation apps provide real-time traffic updates but limited capability to **forecast** future conditions. This platform fills that gap by combining historical traffic data, weather forecasts, and temporal analysis to predict and visualize future congestion on an interactive map.
+> Rapid urbanization and increasing vehicle usage have led to frequent traffic congestion. Existing navigation apps provide real-time updates but limited capability to **forecast** future conditions. This platform fills that gap by combining historical traffic data, weather forecasts, and temporal analysis to predict and visualize future congestion on an interactive map.
+
+---
+
+## 📄 License
+
+Hackathon project — Phase 1 MVP.
