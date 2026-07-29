@@ -12,9 +12,10 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from flask import Flask
+from flask_cors import CORS
 
 from backend.api.routes import bp as api_bp
-from backend.config import FLASK_DEBUG, FLASK_HOST, FLASK_PORT
+from backend.config import CORS_ORIGINS, FLASK_DEBUG, FLASK_HOST, FLASK_PORT
 from backend.services.database_service import init_db
 from backend.utils.logger import get_logger
 
@@ -28,6 +29,10 @@ def create_app() -> Flask:
         static_folder=None,
     )
     app.register_blueprint(api_bp)
+
+    # Cross-origin access for split deployments (e.g. Vercel frontend →
+    # Render backend). Configurable via the CORS_ORIGINS env var.
+    CORS(app, resources={r"/api/*": {"origins": CORS_ORIGINS}})
 
     # Initialise the database on first request
     with app.app_context():
