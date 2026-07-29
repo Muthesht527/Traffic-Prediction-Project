@@ -21,7 +21,7 @@ dist/
 Thumbs.db
 
 # Model artifacts (too large for GitHub)
-*.pkl
+#*.pkl
 traffic_dataset.zip
 
 # Database
