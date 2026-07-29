@@ -1,0 +1,17 @@
+{
+  "mae": 4.0076,
+  "rmse": 5.0631,
+  "r2": 0.9419,
+  "feature_importance_top10": {
+    "numeric__Traffic_Speed_kmh": 0.2895649523742472,
+    "numeric__Vehicle_Count": 0.2802034390870096,
+    "numeric__Road_Occupancy_%": 0.2732466919361343,
+    "numeric__Accident_Report": 0.11999800816025752,
+    "numeric__Sentiment_Score": 0.0047967248554231165,
+    "numeric__Emission_Levels_g_km": 0.004783029123257926,
+    "numeric__Longitude": 0.004338411558695975,
+    "numeric__Latitude": 0.004307365475935139,
+    "numeric__Energy_Consumption_L_h": 0.004064412640183408,
+    "numeric__Ride_Sharing_Demand": 0.003942714838909685
+  }
+}
