@@ -299,6 +299,20 @@ The architecture is designed for seamless expansion:
 
 ---
 
+## 🐳 Deployment
+
+The stack is fully containerised:
+
+```bash
+docker compose up --build
+```
+
+- **Frontend:** http://localhost:8080 · **Backend:** http://localhost:5001
+
+A ready-to-use GitHub Actions CI/CD workflow ships at `deploy/ci-cd.yml` (backend smoke test → frontend build → Docker build + health check) — move it to `.github/workflows/` to activate. See **[DEPLOYMENT.md](DEPLOYMENT.md)** for details, environment variables, and model/DB persistence.
+
+---
+
 ## 📄 License
 
 Hackathon project — Phase 1 MVP.
