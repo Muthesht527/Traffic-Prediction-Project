@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: traffic-forecast-api
+    env: python
+    region: oregon
+    plan: free
+    rootDir: .
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: FLASK_HOST
+        value: "0.0.0.0"
+      - key: FLASK_DEBUG
+        value: "false"
+    healthCheckPath: /api/health
